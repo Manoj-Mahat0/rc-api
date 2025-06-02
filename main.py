@@ -1,21 +1,33 @@
-# main.py
-
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from controller import update_state, get_current_state
 
-app = FastAPI(title="RC Car Control API")
+app = FastAPI()
 
-class Command(BaseModel):
-    cmd: str  # e.g., forward, backward
+# Allow frontend apps (like React) to communicate with this API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # You can restrict to your frontend domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.post("/command")
-def set_command(command: Command):
-    updated = update_state(command.cmd.lower())
-    if updated:
-        return {"message": f"Command '{updated}' applied"}
-    raise HTTPException(status_code=400, detail="Invalid command")
+# To store current command state
+current_state = {"status": "idle"}
 
-@app.get("/status")
-def get_status():
-    return {"current_state": get_current_state()}
+
+class CommandInput(BaseModel):
+    cmd: str  # Example: "forward", "backward", "left", "right", "stop", "voice:<text>"
+
+
+@app.post("/control")
+async def control_car(cmd_input: CommandInput):
+    cmd = cmd_input.cmd.lower()
+    current_state["status"] = cmd
+    return {"message": f"Command '{cmd}' received."}
+
+
+@app.get("/state")
+def get_state():
+    return {"status": current_state["status"]}
