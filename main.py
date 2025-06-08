@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -13,13 +13,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# To store current command state
-current_state = {"status": "idle"}
-
+# To store current command state and distance
+current_state = {"status": "idle", "distance": 0.0}
 
 class CommandInput(BaseModel):
     cmd: str  # Example: "forward", "backward", "left", "right", "stop", "voice:<text>"
 
+class DistanceInput(BaseModel):
+    distance: float
 
 @app.post("/control")
 async def control_car(cmd_input: CommandInput):
@@ -27,6 +28,14 @@ async def control_car(cmd_input: CommandInput):
     current_state["status"] = cmd
     return {"message": f"Command '{cmd}' received."}
 
+@app.post("/distance")
+async def set_distance(distance_input: DistanceInput):
+    current_state["distance"] = distance_input.distance
+    return {"message": f"Distance set to {distance_input.distance}"}
+
+@app.get("/distance")
+def get_distance():
+    return {"distance": current_state["distance"]}
 
 @app.get("/state")
 def get_state():
